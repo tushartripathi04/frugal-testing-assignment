@@ -2,9 +2,9 @@
 
 ## 1. Project Overview
 
-This project demonstrates automated testing of a dynamically updated HTML Canvas application using Python, Playwright, FastAPI, and WebSockets.
+This project demonstrates automated testing of a dynamically updated HTML5 Canvas application using Python, FastAPI, WebSockets and Playwright.
 
-A WebSocket proxy intercepts server messages and introduces Fibonacci-based dynamic delays to simulate asynchronous network conditions.
+A WebSocket interception proxy forwards messages between the browser and backend while introducing Fibonacci-based dynamic delays. The implementation simulates asynchronous network conditions and validates dynamic Canvas interactions.
 
 ## 2. Technologies Used
 
@@ -24,74 +24,104 @@ q1_canvas/
 ├── proxy.py
 ├── index.html
 ├── test_canvas.py
-└── README.md
+├── README.md
+└── evidence/
+    └── q1_complete_execution.png
 ```
 
-## 4. Implementation
+## 4. Implementation Details
 
 ### A. FastAPI WebSocket Server
 
-The server generates continuously changing Canvas state messages containing:
+The FastAPI server generates continuously changing Canvas state messages containing:
 
-- Sequence number
-- Loading or active status
-- Dynamic X and Y coordinates
-- Balance value
-- Microsecond timestamp
+- Sequence number.
+- Loading or active status.
+- Dynamic X and Y coordinates.
+- Balance value.
+- Microsecond timestamp.
 
 ### B. WebSocket Interception Proxy
 
-The proxy forwards messages between the browser and backend while introducing Fibonacci-based delays:
+The proxy forwards messages between the browser and backend while introducing Fibonacci-based delays.
 
-`1000 ms × Fibonacci sequence`, capped at 8000 ms.
+The implemented sequence is:
 
-The implemented delay sequence is 1, 1, 2, 3, 5, 8 seconds.
+| Fibonacci number |   Delay |
+| ---------------- | ------: |
+| 1                | 1000 ms |
+| 1                | 1000 ms |
+| 2                | 2000 ms |
+| 3                | 3000 ms |
+| 5                | 5000 ms |
+| 8                | 8000 ms |
 
-It also supports a corruption mode that injects an invalid mathematical balance value (`1e+7`).
+The proxy also supports a corruption mode that injects an invalid mathematical balance value:
+
+```text
+1e+7
+```
 
 ### C. Dynamic Canvas Detection
 
 Playwright uses JavaScript `requestAnimationFrame` to inspect Canvas pixel data.
 
-The automation identifies the active green target by its RGB color and checks consecutive frames for stability.
+The automation:
 
-### D. Chained Interaction
+1. Reads the Canvas pixel state.
+2. Identifies the active green target using its RGB color.
+3. Checks consecutive frames for stable pixel state.
+4. Determines the target's current coordinates.
 
-After pixel validation, the automation:
+### D. Automated Interaction
 
-1. Hovers over the detected target.
-2. Drags horizontally by 15 pixels.
-3. Clicks the updated target position.
-4. Verifies the successful interaction message.
+After successful pixel validation, the automation performs:
 
-The test measures the time from pixel validation to the first hover command.
+1. Hover over the detected target.
+2. Drag horizontally by 15 pixels.
+3. Click the updated target position.
+4. Verify the successful interaction message.
+
+The test also measures the time between pixel validation and the first hover command.
 
 ### E. Structured Error Handling
 
 The application validates incoming balance values and rejects invalid scientific notation.
 
-The corrupted value `1e+7` is rejected with the structured error code `INVALID_BALANCE`.
+The corrupted mathematical value `1e+7` is rejected using the structured error code:
+
+```text
+INVALID_BALANCE
+```
+
+### F. Circuit Breaker
+
+A circuit breaker prevents repeated failed interaction attempts from continuing indefinitely.
 
 ## 5. Test Results
 
-| Test | Result |
-|---|---|
-| WebSocket communication | Passed |
-| Fibonacci delay injection | Passed |
-| Active pixel detection | Passed |
-| Stable frame validation | Passed |
-| Hover timing | Passed |
-| 15-pixel drag | Passed |
-| Target click | Passed |
-| Corrupted balance rejection | Passed |
+| Test scenario                 | Result |
+| ----------------------------- | ------ |
+| WebSocket communication       | Passed |
+| Fibonacci delay injection     | Passed |
+| Active pixel detection        | Passed |
+| Stable frame validation       | Passed |
+| Hover timing                  | Passed |
+| 15-pixel drag                 | Passed |
+| Target click                  | Passed |
+| Corrupted balance rejection   | Passed |
 | Structured exception handling | Passed |
 
 ### Recorded Execution Evidence
 
-- Pixel-to-hover latency: 20.22 ms
-- Drag distance: 15 pixels
-- Normal Canvas interaction: Passed
-- Corrupted mathematical state: Passed
+- Pixel-to-hover latency: 20.22 ms.
+- Drag distance: 15 pixels.
+- Normal Canvas interaction: Passed.
+- Corrupted mathematical state: Passed.
+
+Screenshot:
+
+`evidence/q1_complete_execution.png`
 
 ## 6. Execution Instructions
 
@@ -102,31 +132,38 @@ pip install fastapi "uvicorn[standard]" websockets playwright
 python -m playwright install chromium
 ```
 
-Terminal 1 — Start FastAPI:
+Open three separate terminals.
+
+**Terminal 1 — Start FastAPI server**
 
 ```powershell
-python -m uvicorn server:app --host 127.0.0.1 --port 8000 --reload
+cd q1_canvas
+python -m uvicorn server:app --host 127.0.0.1 --port 8000
 ```
 
-Terminal 2 — Start WebSocket proxy:
+**Terminal 2 — Start WebSocket proxy**
 
 ```powershell
+cd q1_canvas
 python proxy.py
 ```
 
-Terminal 3 — Run automated tests:
+**Terminal 3 — Run the automated test**
 
 ```powershell
+cd q1_canvas
 python test_canvas.py
 ```
+
+Use the project root's virtual environment when running these commands.
 
 ## 7. Limitations
 
 - The backend uses a simulated WebSocket data stream.
 - The proxy and server are intended for local testing.
 - The circuit breaker stops repeated failed interaction attempts.
-- The implementation demonstrates the specified interaction and corruption scenarios; it does not establish reliability under every possible browser, network, or rendering condition.
+- The implementation demonstrates the specified interaction and corruption scenarios; it does not establish reliability under every possible browser, network or rendering condition.
 
 ## 8. Conclusion
 
-The implementation successfully demonstrates dynamic WebSocket interception, Fibonacci-based latency injection, pixel-based Canvas state detection, chained mouse interaction, and structured rejection of corrupted mathematical data.
+The implementation demonstrates dynamic WebSocket interception, Fibonacci-based latency injection, pixel-based Canvas state detection, chained mouse interactions and structured rejection of corrupted mathematical data.

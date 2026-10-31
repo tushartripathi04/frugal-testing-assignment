@@ -4,7 +4,7 @@
 
 This repository contains my practical implementations for the Frugal Testing AI-Native Software Engineer Intern assignment.
 
-The project demonstrates browser automation, cryptographic API replay protection, and automation across nested Shadow DOM components.
+The project demonstrates three software testing challenges involving dynamic browser automation, cryptographic API security, and nested Shadow DOM automation.
 
 ## Technology Stack
 
@@ -14,7 +14,9 @@ The project demonstrates browser automation, cryptographic API replay protection
 - Pytest
 - Requests
 - WebSockets
+- HTML5 Canvas
 - HTML, CSS and JavaScript
+- HMAC-SHA512
 
 ## Project Structure
 
@@ -40,38 +42,50 @@ frugal-testing-assignment/
 │   ├── shadow_utils.js
 │   ├── test_shadow_dom.py
 │   ├── accessibility_prompt.txt
-│   └── Readme.md
+│   └── README.md
 │
 ├── .gitignore
 └── README.md
 ```
 
-## Implemented Assignments
+## Assignment Implementations
 
 ### Q1 — Dynamic Canvas Automation
 
-Implemented using FastAPI, WebSockets, Python and Playwright.
+**Technologies:** Python, FastAPI, WebSockets, Playwright and JavaScript.
 
-Key features:
+Implemented features:
 
-- WebSocket message interception.
-- Fibonacci-based dynamic delays.
-- Active pixel detection using requestAnimationFrame.
-- Hover, drag and click automation.
+- WebSocket message interception through a proxy.
+- Fibonacci-based dynamic delays: 1, 1, 2, 3, 5 and 8 seconds.
+- Dynamic Canvas pixel detection using `requestAnimationFrame`.
+- Stable pixel-state validation.
+- Automated hover, 15-pixel horizontal drag and click.
 - Circuit breaker for repeated failures.
-- Corrupted mathematical state validation.
+- Corrupted mathematical state injection using scientific notation.
+- Structured error handling with `INVALID_BALANCE`.
+
+Recorded execution evidence:
+
+- Pixel-to-hover latency: 20.22 ms.
+- Drag distance: 15 pixels.
+- Normal Canvas interaction: Passed.
+- Corrupted mathematical state validation: Passed.
 
 ### Q2 — API Transaction Replay Protection
 
-Implemented using FastAPI, Python, Requests and HMAC-SHA512.
+**Technologies:** Python, FastAPI, Requests, Pytest and HMAC-SHA512.
 
-Key features:
+Implemented features:
 
-- Transaction creation and authentication.
-- Server-generated challenge tokens.
-- Timestamp and salt validation.
+- Transaction creation through a POST endpoint.
+- Server-generated transaction challenge.
+- Server timestamp and salt sequence.
 - HMAC-SHA512 request authentication.
+- Timestamp validation.
+- One-time challenge validation.
 - Duplicate request replay detection.
+- HTTP 409 Conflict for duplicate replay.
 - Invalid signature rejection.
 - Expired timestamp rejection.
 
@@ -79,21 +93,22 @@ Key features:
 
 ### Q3 — Nested Shadow DOM Automation
 
-Implemented using HTML, JavaScript and Playwright.
+**Technologies:** Python, Playwright, HTML and JavaScript.
 
-Key features:
+Implemented features:
 
 - Nested open Shadow DOM traversal.
-- Dynamic CSS class handling.
+- Dynamic CSS class detection.
 - Closed Shadow DOM boundary verification.
 - Public component event validation.
-- Accessibility-oriented automation.
+- Accessibility-oriented automation strategy.
+- Automation approach that avoids reliance on IDs, XPath, CSS tags and text matching.
 
 **Automated tests:** 1 passed.
 
-## Verification
+## Test Verification
 
-The combined test suite was executed successfully:
+The combined Q2 and Q3 test suite was executed successfully.
 
 ```text
 q2_api_replay/test_replay.py::test_replay_protection PASSED
@@ -102,52 +117,70 @@ q2_api_replay/test_replay.py::test_expired_timestamp PASSED
 
 q3_shadow_dom/test_shadow_dom.py::test_nested_shadow_dom PASSED
 
-4 passed in 15.52s
+========================= 4 passed in 15.52s =========================
 ```
 
-Q1 was also implemented and tested separately.
+Q1 was tested separately, with the execution evidence documented in its README.
 
-## Running the Project
+## Installation and Setup
 
-Create and activate a Python virtual environment:
+Create a Python virtual environment:
 
 ```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 ```
 
-Install the required dependencies:
+Install the dependencies:
 
 ```powershell
-pip install fastapi uvicorn playwright pytest requests websockets
-playwright install chromium
+pip install fastapi "uvicorn[standard]" playwright pytest requests websockets
+python -m playwright install chromium
 ```
 
-Run individual assignment tests:
+## Running the Tests
+
+From the repository root:
 
 ```powershell
 python -m pytest q2_api_replay/test_replay.py -v
 python -m pytest q3_shadow_dom/test_shadow_dom.py -v
 ```
 
-For Q2, start the server from its directory:
+To run the combined Q2 and Q3 tests:
+
+```powershell
+python -m pytest -v
+```
+
+### Running Q2 API Server
+
+Open a terminal:
 
 ```powershell
 cd q2_api_replay
 python -m uvicorn server:app --host 127.0.0.1 --port 8001
 ```
 
-Run the tests in a second terminal.
+Open another terminal to execute the Q2 tests.
 
-Refer to the individual README files for Q1, Q2 and Q3 setup and execution instructions.
+The Q2 test configuration uses:
 
-## Evidence
+```text
+http://127.0.0.1:8001
+```
 
-Screenshots and demonstration videos will be organized in the respective assignment folders as they are finalized.
+Refer to the individual README files for detailed execution instructions.
+
+## Evidence and Demonstrations
+
+Screenshots and workflow demonstration videos will be organized in the respective assignment folders as they are finalized.
 
 ## AI Assistance Disclosure
 
-AI tools were used for development assistance, debugging, code review and documentation. The implementations were tested locally, and the results are documented in the respective assignment folders.
+AI tools were used for development assistance, debugging, code review and documentation.
+
+The implementations were executed and tested locally. Test results and implementation evidence are documented in the respective project directories.
 
 ## Author
 
