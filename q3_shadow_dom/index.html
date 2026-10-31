@@ -1,0 +1,231 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Frugal Testing - Shadow DOM Lab</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f3f4f6;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 750px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #1e293b;
+        }
+
+        p {
+            color: #64748b;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Frugal Testing Shadow DOM Lab</h1>
+
+    <p>
+        Demonstration of nested Shadow DOM,
+        dynamic CSS classes and accessibility.
+    </p>
+
+    <enterprise-portal></enterprise-portal>
+
+    <p id="result" role="status" aria-live="polite">
+        Waiting for authorization...
+    </p>
+
+</div>
+
+
+<script>
+
+// --------------------------------------------------
+// COMPONENT 1: ENTERPRISE PORTAL
+// OPEN SHADOW ROOT
+// --------------------------------------------------
+
+class EnterprisePortal extends HTMLElement {
+
+    constructor() {
+        super();
+
+        const root = this.attachShadow({
+            mode: "open"
+        });
+
+        root.innerHTML = `
+            <style>
+                .portal {
+                    padding: 20px;
+                    background: #e0f2fe;
+                    border-radius: 10px;
+                }
+            </style>
+
+            <div class="portal">
+                <h2>Enterprise Portal</h2>
+
+                <payment-terminal></payment-terminal>
+            </div>
+        `;
+    }
+
+}
+
+customElements.define(
+    "enterprise-portal",
+    EnterprisePortal
+);
+
+
+// --------------------------------------------------
+// COMPONENT 2: PAYMENT TERMINAL
+// OPEN SHADOW ROOT
+// DYNAMIC CLASS NAME
+// --------------------------------------------------
+
+class PaymentTerminal extends HTMLElement {
+
+    constructor() {
+        super();
+
+        const root = this.attachShadow({
+            mode: "open"
+        });
+
+        const dynamicClass =
+            "payment-" + Math.random().toString(36).slice(2, 9);
+
+        root.innerHTML = `
+            <style>
+                .terminal {
+                    padding: 20px;
+                    background: #f1f5f9;
+                    border-radius: 10px;
+                }
+            </style>
+
+            <div class="${dynamicClass}">
+                <div class="terminal">
+
+                    <h3>Payment Terminal</h3>
+
+                    <security-sandbox></security-sandbox>
+
+                </div>
+            </div>
+        `;
+    }
+
+}
+
+customElements.define(
+    "payment-terminal",
+    PaymentTerminal
+);
+
+
+// --------------------------------------------------
+// COMPONENT 3: SECURITY SANDBOX
+// CLOSED SHADOW ROOT
+// ACCESSIBLE HOST INTERFACE
+// --------------------------------------------------
+
+class SecuritySandbox extends HTMLElement {
+
+    constructor() {
+        super();
+
+        const root = this.attachShadow({
+            mode: "closed"
+        });
+
+        root.innerHTML = `
+            <style>
+                .security {
+                    background: #dcfce7;
+                    padding: 20px;
+                    border-radius: 10px;
+                }
+
+                button {
+                    background: #15803d;
+                    color: white;
+                    padding: 12px 20px;
+                    border: none;
+                    border-radius: 6px;
+                    cursor: pointer;
+                }
+            </style>
+
+            <div class="security">
+
+                <h3>Security Sandbox</h3>
+
+                <button
+                    type="button"
+                    aria-label="Authorize Ledger Funds"
+                >
+                    Authorize Ledger Funds
+                </button>
+
+            </div>
+        `;
+
+        root.querySelector("button").addEventListener(
+            "click",
+            () => {
+                this.dispatchEvent(
+                    new CustomEvent("authorization-complete", {
+                        bubbles: true,
+                        composed: true
+                    })
+                );
+            }
+        );
+    }
+
+}
+
+customElements.define(
+    "security-sandbox",
+    SecuritySandbox
+);
+
+
+// --------------------------------------------------
+// ACCESSIBLE EVENT HANDLING
+// --------------------------------------------------
+
+document.addEventListener(
+    "authorization-complete",
+    () => {
+
+        document.getElementById("result").textContent =
+            "Authorization completed successfully.";
+
+    }
+);
+
+</script>
+
+</body>
+<script src="shadow_utils.js"></script>
+</html>

@@ -1,0 +1,489 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frugal Testing - Canvas Automation Lab</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f1f5f9;
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 850px;
+            margin: auto;
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+        }
+
+        canvas {
+            width: 100%;
+            max-width: 700px;
+            border: 2px solid #334155;
+            border-radius: 8px;
+        }
+
+        .status {
+            margin: 12px 0;
+            padding: 12px;
+            background: #e2e8f0;
+            border-radius: 6px;
+        }
+
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .success {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        button {
+            padding: 10px 18px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Frugal Testing Canvas Automation</h1>
+
+    <p>Dynamic WebSocket Canvas Testing Environment</p>
+
+    <div id="connection" class="status">
+        Connecting...
+    </div>
+
+    <div id="state" class="status">
+        Waiting for canvas updates...
+    </div>
+
+    <div id="balance" class="status">
+        Balance: Loading
+    </div>
+
+    <canvas id="marketCanvas" width="700" height="350"></canvas>
+
+    <div id="errorBoundary" class="status" role="alert" aria-live="assertive">
+        No errors detected.
+    </div>
+
+    <div id="interaction" class="status" role="status" aria-live="polite">
+        Waiting for interaction...
+    </div>
+
+    <button id="resetButton" type="button">
+        Reset Application
+    </button>
+
+</div>
+
+<script>
+
+const canvas = document.getElementById("marketCanvas");
+const ctx = canvas.getContext("2d");
+
+const connection = document.getElementById("connection");
+const state = document.getElementById("state");
+const balanceElement = document.getElementById("balance");
+const errorBoundary = document.getElementById("errorBoundary");
+const interaction = document.getElementById("interaction");
+
+let socket = null;
+let latestState = null;
+let target = null;
+
+let isDragging = false;
+let lastSequence = 0;
+
+
+// --------------------------------------------------
+// STRUCTURED ERROR BOUNDARY
+// --------------------------------------------------
+
+function reportError(type, message) {
+
+    errorBoundary.className = "status error";
+
+    errorBoundary.textContent =
+        `${type}: ${message}`;
+
+    console.error({
+        type,
+        message,
+        timestamp: Date.now()
+    });
+}
+
+
+// --------------------------------------------------
+// BALANCE VALIDATION
+// --------------------------------------------------
+
+function validateBalance(value) {
+
+    if (
+        typeof value !== "string" ||
+        !/^-?\d+(\.\d{1,2})?$/.test(value)
+    ) {
+
+        reportError(
+            "INVALID_BALANCE",
+            "Balance must be a decimal string with at most two places."
+        );
+
+        return false;
+    }
+
+    const numericValue = Number(value);
+
+    if (
+        !Number.isFinite(numericValue) ||
+        numericValue < 0 ||
+        numericValue > 1000000
+    ) {
+
+        reportError(
+            "BALANCE_OUT_OF_RANGE",
+            "Balance is outside the permitted range."
+        );
+
+        return false;
+    }
+
+    return true;
+}
+
+
+// --------------------------------------------------
+// CANVAS RENDERING
+// --------------------------------------------------
+
+function renderCanvas(data) {
+
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    // Background
+    ctx.fillStyle = "#f8fafc";
+
+    ctx.fillRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    // Grid
+    ctx.strokeStyle = "#cbd5e1";
+    ctx.lineWidth = 1;
+
+    for (let x = 0; x <= 700; x += 50) {
+
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, 350);
+        ctx.stroke();
+
+    }
+
+    for (let y = 0; y <= 350; y += 50) {
+
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(700, y);
+        ctx.stroke();
+
+    }
+
+    if (data.status === "loading") {
+
+        ctx.fillStyle = "#94a3b8";
+
+        ctx.fillRect(
+            180,
+            130,
+            100,
+            40
+        );
+
+        return;
+    }
+
+    if (data.status === "active") {
+
+    // Preserve the target position while a drag is in progress.
+    if (!isDragging) {
+        target = {
+            x: data.x,
+            y: data.y
+        };
+    }
+
+        // Active target color.
+        ctx.fillStyle = "#16a34a";
+
+        ctx.beginPath();
+
+        ctx.arc(
+            target.x,
+            target.y,
+            18,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+
+        // Center marker
+        ctx.fillStyle = "#ffffff";
+
+        ctx.beginPath();
+
+        ctx.arc(
+            target.x,
+            target.y,
+            5,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+
+    }
+
+}
+
+
+// --------------------------------------------------
+// WEBSOCKET CONNECTION
+// --------------------------------------------------
+
+function connectWebSocket() {
+
+    const params = new URLSearchParams(
+        window.location.search
+    );
+
+    const corrupt = params.get("corrupt") === "1";
+
+    const wsURL =
+        `ws://127.0.0.1:8766/ws?corrupt=${corrupt ? "1" : "0"}`;
+
+    socket = new WebSocket(wsURL);
+
+    socket.onopen = () => {
+
+        connection.textContent =
+            "WebSocket connected through proxy.";
+
+        connection.className = "status success";
+
+    };
+
+    socket.onmessage = (event) => {
+
+        try {
+
+            const data = JSON.parse(event.data);
+
+            if (
+                !Number.isInteger(data.sequence) ||
+                data.sequence <= lastSequence
+            ) {
+                reportError(
+                    "STALE_FRAME",
+                    "Out-of-order or duplicate frame received."
+                );
+
+                return;
+            }
+
+            lastSequence = data.sequence;
+
+            if (data.status === "active") {
+
+                if (!validateBalance(data.balance)) {
+                    return;
+                }
+
+                balanceElement.textContent =
+                    `Balance: ₹${data.balance}`;
+
+            }
+
+            latestState = data;
+
+            state.textContent =
+                `Canvas state: ${data.status}`;
+
+            renderCanvas(data);
+
+        } catch (error) {
+
+            reportError(
+                "STREAM_ERROR",
+                error.message
+            );
+
+        }
+
+    };
+
+    socket.onerror = () => {
+
+        reportError(
+            "WEBSOCKET_ERROR",
+            "WebSocket communication failed."
+        );
+
+    };
+
+    socket.onclose = () => {
+
+        connection.textContent =
+            "WebSocket disconnected.";
+
+    };
+
+}
+
+
+// --------------------------------------------------
+// MOUSE INTERACTION
+// --------------------------------------------------
+// --------------------------------------------------
+// MOUSE INTERACTION
+// --------------------------------------------------
+
+canvas.addEventListener("mousedown", (event) => {
+
+    if (!target) return;
+
+    const rect = canvas.getBoundingClientRect();
+
+    const x = (event.clientX - rect.left) *
+        canvas.width / rect.width;
+
+    const y = (event.clientY - rect.top) *
+        canvas.height / rect.height;
+
+    const distance = Math.hypot(
+        x - target.x,
+        y - target.y
+    );
+
+    if (distance <= 22) {
+        isDragging = true;
+    }
+
+});
+
+
+canvas.addEventListener("mousemove", (event) => {
+
+    if (!isDragging || !target) return;
+
+    const rect = canvas.getBoundingClientRect();
+
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    target.x = (event.clientX - rect.left) * scaleX;
+    target.y = (event.clientY - rect.top) * scaleY;
+
+    renderCanvas({
+        status: "active",
+        x: target.x,
+        y: target.y
+    });
+
+});
+
+
+canvas.addEventListener("mouseup", () => {
+
+    isDragging = false;
+
+});
+
+
+canvas.addEventListener("click", (event) => {
+
+    if (!target || isDragging) return;
+
+    const rect = canvas.getBoundingClientRect();
+
+    const x = (event.clientX - rect.left) *
+        canvas.width / rect.width;
+
+    const y = (event.clientY - rect.top) *
+        canvas.height / rect.height;
+
+    const distance = Math.hypot(
+        x - target.x,
+        y - target.y
+    );
+
+    if (distance <= 22) {
+
+        interaction.textContent =
+            "Target successfully clicked.";
+
+        interaction.className = "status success";
+
+    } else {
+
+        interaction.textContent =
+            "Click missed the target.";
+
+        interaction.className = "status error";
+
+    }
+
+});
+
+
+// --------------------------------------------------
+// RESET APPLICATION
+// --------------------------------------------------
+
+document.getElementById("resetButton").addEventListener(
+    "click",
+    () => {
+
+        if (socket) {
+            socket.close();
+        }
+
+        window.location.reload();
+
+    }
+);
+
+
+// --------------------------------------------------
+// INITIALIZE
+// --------------------------------------------------
+
+connectWebSocket();
+
+</script>
+
+</body>
+</html>
